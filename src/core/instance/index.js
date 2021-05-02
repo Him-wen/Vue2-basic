@@ -21,6 +21,7 @@ stateMixin(Vue)
 eventsMixin(Vue)
 // _update $forceUpdate $ destroy
 lifecycleMixin(Vue)
-renderMixin(Vue)
+// 渲染 $nexttick _render
+renderMixßin(Vue)
 
 export default Vue

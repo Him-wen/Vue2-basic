@@ -49,7 +49,7 @@ export function initRender (vm: Component) {
     defineReactive(vm, '$listeners', options._parentListeners || emptyObject, null, true)
   }
 }
-
+ß
 export function renderMixin (Vue: Class<Component>) {
   // install runtime convenience helpers 在组件实例上挂载一些运行时需要用到的工具方法
   installRenderHelpers(Vue.prototype)
