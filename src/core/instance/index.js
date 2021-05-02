@@ -15,8 +15,11 @@ function Vue (options) {
 }
 
 initMixin(Vue)
+// $data $props $set $ delete $watch
 stateMixin(Vue)
+// $on $emit $once $off
 eventsMixin(Vue)
+// _update $forceUpdate $ destroy
 lifecycleMixin(Vue)
 renderMixin(Vue)
 

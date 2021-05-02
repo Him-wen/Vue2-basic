@@ -27,6 +27,7 @@ let uid = 0
  */
  */
 export default class Watcher {
+  // 参数的顺序可以不固定
   vm: Component;
   expression: string;
   cb: Function;
@@ -83,7 +84,7 @@ export default class Watcher {
       : ''
     // parse expression for getter
     if (typeof expOrFn === 'function') {
-      this.getter = expOrFn
+      this.getter = expOrFn// getter 方法就是传入的第二个参数
     } else {
       this.getter = parsePath(expOrFn)
       if (!this.getter) {

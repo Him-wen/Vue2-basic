@@ -109,10 +109,17 @@ function initProps (vm: Component, propsOptions: Object) {
   toggleObserving(true)
 }
 
+/**
+ * 做了三件事
+ *   1、判重处理，data 对象上的属性不能和 props、methods 对象上的属性相同
+ *   2、代理 data 对象上的属性到 vm 实例
+ *   3、为 data 对象的上数据设置响应式 
+ */
 function initData (vm: Component) {
+  // 得到 data 对象
   let data = vm.$options.data
   data = vm._data = typeof data === 'function'
-    ? getData(data, vm)
+    ? getData(data, vm)// call 让当前组件实例(vm) this 继承了 this._data 的值
     : data || {}
   if (!isPlainObject(data)) {
     data = {}
@@ -122,6 +129,11 @@ function initData (vm: Component) {
       vm
     )
   }
+  /**
+   * 两件事
+   *   1、判重处理，data 对象上的属性不能和 props、methods 对象上的属性相同
+   *   2、代理 data 对象上的属性到 vm 实例
+   */
   // proxy data on instance
   const keys = Object.keys(data)
   const props = vm.$options.props
@@ -144,13 +156,13 @@ function initData (vm: Component) {
         vm
       )
     } else if (!isReserved(key)) {
-      proxy(vm, `_data`, key)
+      proxy(vm, `_data`, key) // 为 data 对象上的数据设置响应式
     }
   }
   // observe data
   observe(data, true /* asRootData */)
 }
-
+// call 让当前组件实例(vm) this 继承了 this._data 的值,用 call 改变指向将 $data（原型方法） 指向 当前this 的数据
 export function getData (data: Function, vm: Component): any {
   // #7573 disable dep collection when invoking data getters
   pushTarget()
@@ -324,6 +336,8 @@ export function stateMixin (Vue: Class<Component>) {
   dataDef.get = function () { return this._data }
   const propsDef = {}
   propsDef.get = function () { return this._props }
+  // 将 data 属性和 props 属性挂载到 Vue.prototype 对象上
+  // 这样在程序中就可以通过 this.$data 和 this.$props 来访问 data 和 props 对象了
   if (process.env.NODE_ENV !== 'production') {
     dataDef.set = function () {
       warn(
@@ -332,6 +346,7 @@ export function stateMixin (Vue: Class<Component>) {
         this
       )
     }
+    // props是只读的
     propsDef.set = function () {
       warn(`$props is readonly.`, this)
     }
@@ -339,9 +354,25 @@ export function stateMixin (Vue: Class<Component>) {
   Object.defineProperty(Vue.prototype, '$data', dataDef)
   Object.defineProperty(Vue.prototype, '$props', propsDef)
 
-  Vue.prototype.$set = set
+
+  // this.$set
+  // 全局API Vue.set的别名
+  Vue.prototype.$set = s et
   Vue.prototype.$delete = del
 
+  //this.$watch
+  /**
+ * 创建 watcher，返回 unwatch，共完成如下 5 件事：
+ *   1、兼容性处理，保证最后 new Watcher 时的 cb 为函数
+ *   2、标示用户 watcher
+ *   3、创建 watcher 实例
+ *   4、如果设置了 immediate，则立即执行一次 cb
+ *   5、返回 unwatch
+ * @param {*} expOrFn key
+ * @param {*} cb 回调函数
+ * @param {*} options 配置项，用户直接调用 this.$watch 时可能会传递一个 配置项
+ * @returns 返回 unwatch 函数，用于取消 watch 监听
+ */
   Vue.prototype.$watch = function (
     expOrFn: string | Function,
     cb: any,
@@ -354,10 +385,10 @@ export function stateMixin (Vue: Class<Component>) {
     options = options || {}
     options.user = true
     const watcher = new Watcher(vm, expOrFn, cb, options)
-    if (options.immediate) {
+    if (options.immediate) {// 表示立即执行
       try {
         cb.call(vm, watcher.value)
-      } catch (error) {
+      } catch (error) {// 表示立即执行
         handleError(error, vm, `callback for immediate watcher "${watcher.expression}"`)
       }
     }

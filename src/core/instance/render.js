@@ -51,14 +51,19 @@ export function initRender (vm: Component) {
 }
 
 export function renderMixin (Vue: Class<Component>) {
-  // install runtime convenience helpers
+  // install runtime convenience helpers 在组件实例上挂载一些运行时需要用到的工具方法
   installRenderHelpers(Vue.prototype)
 
+  // Vue.nexttick
   Vue.prototype.$nextTick = function (fn: Function) {
     return nextTick(fn, this)
   }
-
+/**
+ * 通过执行 render 函数生成 VNode
+ * 不过里面加了大量的异常处理代码
+ */
   Vue.prototype._render = function (): VNode {
+    // 获取 render：1.用户实例化 vue 时提供了 render 配置项2.编译器编译模版生成了 render
     const vm: Component = this
     const { render, _parentVnode } = vm.$options
 
@@ -71,9 +76,11 @@ export function renderMixin (Vue: Class<Component>) {
     vm.$vnode = _parentVnode
     // render self
     let vnode
-    try {
+    try {// 执行render函数 得到组件的vnode
+
       vnode = render.call(vm._renderProxy, vm.$createElement)
-    } catch (e) {
+
+    } catch (e) {// 异常处理
       handleError(e, vm, `render`)
       // return error render result,
       // or previous vnode to prevent render error causing blank component
@@ -89,7 +96,7 @@ export function renderMixin (Vue: Class<Component>) {
         vnode = vm._vnode
       }
     }
-    // return empty vnode in case the render function errored out
+    // 多根节点的异常提示，vue2 不支持多根节点 return empty vnode in case the render function errored out
     if (!(vnode instanceof VNode)) {
       if (process.env.NODE_ENV !== 'production' && Array.isArray(vnode)) {
         warn(

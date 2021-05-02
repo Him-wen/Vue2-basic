@@ -16,7 +16,7 @@ let pending = false
  */
 function flushCallbacks () { // 任务队列在task中创建一个事件，执行时将callbacks中的cb回调函数全部执行，只会有一个函数
   pending = false // 
-  const copies = callbacks.slice(0)
+  const copies = callbacks.slice(0)// 相当于备份一个，以便于下面执行
   callbacks.length = 0// 清空 数组
   for (let i = 0; i < copies.length; i++) {// 在执行时将callbacks中的所有cb（flushSchedulerQueue）依次执行
     copies[i]()
