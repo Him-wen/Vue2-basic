@@ -70,7 +70,7 @@ export function eventsMixin (Vue: Class<Component>) {
       // 如果 vm._events[event] 存在 不存在的话置为 [],然后一个this.$on('click1',cb1),this.$on('click1',cb1)
        (vm._events[event] || (vm._events[event] = [])).push(fn)
       // optimize hook:event cost by using a boolean flag marked at registration
-      // instead of a hash lookup
+      // instead of a hash lookup  置为true，标记当前组件实例存在 hook event
       if (hookRE.test(event)) {
         vm._hasHookEvent = true
       }

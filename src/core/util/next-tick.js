@@ -14,8 +14,8 @@ let pending = false
  *   2、清空 callbacks 数组
  *   3、执行 callbacks 数组中的每一个函数（flushSchedulerQueue）
  */
-function flushCallbacks () { // 任务队列在task中创建一个事件，执行时将callbacks中的cb回调函数全部执行，只会有一个函数
-  pending = false // 
+function flushCallbacks () { // 在浏览器空闲的时候 执行这个任务 任务队列在task中创建一个事件，执行时将callbacks中的cb回调函数全部执行，只会有一个函数
+  pending = false // 将pengding置为false 再接着nexttick里面的逻辑
   const copies = callbacks.slice(0)// 相当于备份一个，以便于下面执行
   callbacks.length = 0// 清空 数组
   for (let i = 0; i < copies.length; i++) {// 在执行时将callbacks中的所有cb（flushSchedulerQueue）依次执行
@@ -121,14 +121,14 @@ export function nextTick (cb?: Function, ctx?: Object) {// 回调函数，上下
       _resolve(ctx)
     }
   })
-  if (!pending) {// pending为fasle，执行 在浏览器的任务队列中（首选微任务队列）放入 flushCallbacks 函数
+  if (!pending) {// pending为fasle，表示异步队列没有这个叫flushCallbacks的函数，
+    //下面微任务或者红任务就执行 在浏览器的任务队列中（首选微任务队列）放入 flushCallbacks 函数
     // 优先使用promise微任务
-    // 宏任务 与 微任务的区别
     pending = true
     if (useMacroTask) {// 初始化就是置false
       macroTimerFunc()
     } else {
-      microTimerFunc()// 防止多次调用：在pengding为fasle的时候执行：pending为true的话，表示已经提交了task，即将或者正在执行回调任务队列中的所有任务
+      microTimerFunc()// 优先使用微任务 防止多次调用：在pengding为fasle的时候执行：pending为true的话，表示已经提交了task，即将或者正在执行回调任务队列中的所有任务
     }
   }
   // $flow-disable-line

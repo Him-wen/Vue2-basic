@@ -245,6 +245,12 @@ export function defineReactive (
  * triggers change notification if the property doesn't
  * already exist.
  * 在对象上设置属性。 添加新属性，如果该属性尚不存在，则触发更改通知。
+ * /**
+ * 通过 Vue.set 或者 this.$set 方法给 target 的指定 key 设置值 val
+ * 如果 target 是对象，并且 key 原本不存在，则为新 key 设置响应式，然后执行依赖通知
+ * 运行时可以添加根组件级别的属性 data(){ key1:1,key2:{}}对象 需要添加一个this.key3:3
+ * 这样设置时不具备响应式的，但是key2.key:2.1是可以触发响应式的（key2.key不是根组件），key3可以通过
+ * Vue.set(this.'key3',val)使用这个全局方法来进行设置，数组同理，具体可以参考Vue官方文档
  */
 export function set (target: Array<any> | Object, key: any, val: any): any {
   if (process.env.NODE_ENV !== 'production' &&
@@ -252,15 +258,19 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
   ) {
     warn(`Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
+  // 更新数组指定下标的元素，Vue.set(array, idx, val)，通过 splice 方法实现响应式更新
   if (Array.isArray(target) && isValidArrayIndex(key)) {
     target.length = Math.max(target.length, key)
     target.splice(key, 1, val)
     return val
   }
+  // 更新对象已有属性，Vue.set(obj, key, val)，执行更新即可
   if (key in target && !(key in Object.prototype)) {
-    target[key] = val
+    target[key] = val// 只是对旧值更新
     return val
   }
+  // 不能向 Vue 实例或者 $data 添加动态添加响应式属性，vmCount 的用处之一，
+  // this.$data 的 ob.vmCount = 1，表示根组件，其它子组件的 vm.vmCount 都是 0
   const ob = (target: any).__ob__
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== 'production' && warn(
@@ -273,6 +283,7 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
     target[key] = val
     return val
   }
+  // 给对象定义新属性，通过 defineReactive 方法设置响应式，并触发依赖更新
   defineReactive(ob.value, key, val)
   ob.dep.notify()
   return val
@@ -287,10 +298,12 @@ export function del (target: Array<any> | Object, key: any) {
   ) {
     warn(`Cannot delete reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
+  // target 为数组，则通过 splice 方法删除指定下标的元素
   if (Array.isArray(target) && isValidArrayIndex(key)) {
     target.splice(key, 1)
     return
   }
+  // 避免删除 Vue 实例的属性或者 $data 的数据
   const ob = (target: any).__ob__
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== 'production' && warn(
@@ -299,13 +312,16 @@ export function del (target: Array<any> | Object, key: any) {
     )
     return
   }
+  // 如果属性不存在直接结束
   if (!hasOwn(target, key)) {
     return
   }
+  // 通过 delete 运算符删除对象的属性
   delete target[key]
   if (!ob) {
     return
   }
+  // 执行依赖通知
   ob.dep.notify()
 }
 

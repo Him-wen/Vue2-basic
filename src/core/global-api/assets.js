@@ -3,6 +3,12 @@
 import { ASSET_TYPES } from 'shared/constants'
 import { isPlainObject, validateComponentName } from '../util/index'
 
+/**
+ * 定义 Vue.component、Vue.filter、Vue.directive 这三个方法
+ * 这三个方法所做的事情是类似的，就是在 this.options.xx 上存放对应的配置
+ * 比如 Vue.component(compName, {xx}) 结果是 this.options.components.compName = 组件构造函数
+ * ASSET_TYPES = ['component', 'directive', 'filter']
+ */
 export function initAssetRegisters (Vue: GlobalAPI) {
   /**
    * Create asset registration methods.

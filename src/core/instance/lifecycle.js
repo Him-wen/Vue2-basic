@@ -333,21 +333,34 @@ export function deactivateChildComponent (vm: Component, direct?: boolean) {
   }
 }
 
+/**
+ * callHook(vm, 'mounted')
+ * 执行实例指定的生命周期钩子函数
+ * 如果实例设置有对应的 Hook Event，比如：<comp @hook:mounted="method" />，执行完生命周期函数之后，触发该事件的执行
+ * @param {*} vm 组件实例
+ * @param {*} hook 生命周期钩子函数
+ */
 export function callHook (vm: Component, hook: string) {
+  // 打开依赖收集
   // #7573 disable dep collection when invoking lifecycle hooks
   pushTarget()
+  // 从实例配置对象中获取指定钩子函数，比如 mounted
   const handlers = vm.$options[hook]
-  if (handlers) {
+  if (handlers) {// 如果存在就遍历然后依次执行
     for (let i = 0, j = handlers.length; i < j; i++) {
       try {
         handlers[i].call(vm)
-      } catch (e) {
+      } catch (e) {// 捕获异常的错误
         handleError(e, vm, `${hook} hook`)
       }
     }
   }
+  // Hook Event，如果设置了 Hook Event，比如 <comp @hook:mounted="method" />，则通过 $emit 触发该事件
+  // vm._hasHookEvent 标识组件是否有 hook event，这是在 vm.$on 中处理组件自定义事件时设置的
   if (vm._hasHookEvent) {
+    // vm.$emit('hook:mounted') 执行vm._event['hook:mounted']数组当中的所有响应式函数，参考$on 检测事件是否存在
     vm.$emit('hook:' + hook)
   }
+  // 关闭依赖收集
   popTarget()
 }
