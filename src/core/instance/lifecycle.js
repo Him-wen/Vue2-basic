@@ -32,9 +32,10 @@ export function setActiveInstance(vm: Component) {
 export function initLifecycle (vm: Component) {
   const options = vm.$options
 
-  // locate first non-abstract parent
+  // locate first non-abstract parent 找到第一个非abstract父组件实例 与keep-alive有关
   let parent = options.parent
   if (parent && !options.abstract) {
+    // 组件实例建立父子关系会根据abstract属性决定是否忽略某个组件。在keep-alive中，设置了abstract:true，那Vue就会跳过该组件实例。
     while (parent.$options.abstract && parent.$parent) {
       parent = parent.$parent
     }
