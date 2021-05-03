@@ -107,6 +107,7 @@ export function withMacroTask (fn: Function): Function {
  * @param {*} cb 接收一个回调函数 => flushSchedulerQueue
  * @param {*} ctx 上下文
  * @returns 
+ * 需要拿到修改的数据的DOM，可以手动将需要的DOM操作放到nexttick里面的函数 延迟 执行 就可以操作修改后的元素DOM
  */
 export function nextTick (cb?: Function, ctx?: Object) {// 回调函数，上下文
   let _resolve

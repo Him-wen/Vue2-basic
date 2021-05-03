@@ -83,6 +83,6 @@ export function initGlobalAPI (Vue: GlobalAPI) {
   initMixin(Vue)
   // Vue.extend
   initExtend(Vue)
-  // Vue.component/directive/filter
+  // Vue.component/directive/filter 定义 Vue.component、Vue.filter、Vue.directive 这三个方法
   initAssetRegisters(Vue)
 }

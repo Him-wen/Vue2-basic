@@ -14,6 +14,12 @@ export function initAssetRegisters (Vue: GlobalAPI) {
    * Create asset registration methods.
    */
   ASSET_TYPES.forEach(type => {
+    /**
+   * 比如：Vue.component(name, definition)
+   * @param {*} id name
+   * @param {*} definition 组件构造函数或者配置对象 
+   * @returns 返回组件构造函数
+   */
     Vue[type] = function (
       id: string,
       definition: Function | Object
@@ -25,11 +31,12 @@ export function initAssetRegisters (Vue: GlobalAPI) {
         if (process.env.NODE_ENV !== 'production' && type === 'component') {
           validateComponentName(id)
         }
-        if (type === 'component' && isPlainObject(definition)) {
+        if (type === 'component' && isPlainObject(definition)) {// 组件
+          // extend 就是 Vue.extend，所以这时的 definition 就变成了 组件构造函数，使用时可直接 new Definition()
           definition.name = definition.name || id
           definition = this.options._base.extend(definition)
         }
-        if (type === 'directive' && typeof definition === 'function') {
+        if (type === 'directive' && typeof definition === 'function') {// 指令
           definition = { bind: definition, update: definition }
         }
         this.options[type + 's'][id] = definition
