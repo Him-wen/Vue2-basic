@@ -69,7 +69,8 @@ export default {
 
   created () {
     this.cache = Object.create(null)// 缓存已经创建的vnode 虚拟dom
-    this.keys = []// 缓存的虚拟dom的键集合
+    // this.cache是一个对象，用来存储需要缓存的组件，它将以如下形式存储：
+    this.keys = []// 缓存的虚拟dom的键集合 以上cache的键值
   },
 
   destroyed () {
@@ -78,7 +79,7 @@ export default {
     }
   },
 
-  mounted () {// 第二个参数是 组件name
+  mounted () {// 第二个参数是 组件name 在mounted钩子函数中观测 include 和 exclude 的变化
     // 实时监听是否缓存的变动
     this.$watch('include', val => {
       pruneCache(this, name => matches(val, name))// 缓存
@@ -126,8 +127,9 @@ export default {
       if (cache[key]) {// 已经命中过该组件的缓存
         vnode.componentInstance = cache[key].componentInstance// 直接从缓存中拿 vnode的组件实例
         // make current key freshest
-        remove(keys, key)
+        remove(keys, key)// 先将最后一个点的删除
         keys.push(key)// 调整key的顺序放在了最后一个
+        // 这里是没有命中
       } else {
         cache[key] = vnode// 将现在的 vnode 设置进缓存
         keys.push(key)

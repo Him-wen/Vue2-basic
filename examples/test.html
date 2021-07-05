@@ -7,37 +7,16 @@
 <body>
   <div id="app">
     {{ msg }}
-    <a1></a1>
   </div>
   <script src="../dist/vue.js"></script>
   <script>
-    debugger// 模拟Hookevent
-    Vue.component('a1',{
-        template:`
-        <ul>
-            <li> {{arr}}</li>
-            </ul>
-        `,
-          data(){
-              return{
-                  arr:[],
-              }
-          },
-          async mounted(){
-              console.log('mounted钩子函数');
-              this.arr =await new Promise(resolve=>{
-                  setTimeout(()=>{
-                    resolve([2])
-                  } ,1000);
-              })
-          }
-      })
+    debugger
     new Vue({
       el: '#app',
       data: {
         msg: 'hello vue'
       }
-    })  
+    })
   </script>
 </body>
 </html>

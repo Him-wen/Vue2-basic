@@ -109,10 +109,10 @@ export function createComponent (
     return
   }
 
-  const baseCtor = context.$options._base
+  const baseCtor = context.$options._base// 这个实际上就是Vue
 
   // plain options object: turn it into a constructor
-  if (isObject(Ctor)) {
+  if (isObject(Ctor)) {// 如果组件是一个对象的话，就执行里面逻辑
     Ctor = baseCtor.extend(Ctor)
   }
 

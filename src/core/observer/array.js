@@ -31,9 +31,10 @@ methodsToPatch.forEach(function (method) {
   const original = arrayProto[method]
   // def 就是 Object.defineProperty，拦截 arrayMethods.method 的访问
   def(arrayMethods, method, function mutator (...args) {
-    const result = original.apply(this, args)
+    const result = original.apply(this, args)// 将original方法绑定在this上，赋值这个result并返回(apply是返回一个函数)
     const ob = this.__ob__
     let inserted
+    // 我们知道，可以向数组内新增元素的方法有3个，分别是：push、unshift、splice
     switch (method) {
       case 'push':
       case 'unshift':
@@ -43,6 +44,7 @@ methodsToPatch.forEach(function (method) {
         inserted = args.slice(2)
         break
     }
+    // 对新插入的元素做响应式处理
     if (inserted) ob.observeArray(inserted)
     // notify change通知更新
     ob.dep.notify()

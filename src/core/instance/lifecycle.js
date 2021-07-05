@@ -68,12 +68,14 @@ export function lifecycleMixin (Vue: Class<Component>) {
     // Vue.prototype.__patch__ is injected in entry points
     // based on the rendering backend used.
 
+    // 核心就是调用patch方法
     if (!prevVnode) {
       // initial render 初次渲染
       vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */)
     } else {
       // updates 响应式数据更新时，即更新页面时走这里
       vm.$el = vm.__patch__(prevVnode, vnode)
+      // patch方法赋值给了这个方法，绕很多圈是因为这个是和浏览器强相关的
     }
 
     restoreActiveInstance()
@@ -149,6 +151,8 @@ export function lifecycleMixin (Vue: Class<Component>) {
   }
 }
 
+// 核心就是先实例化一个渲染Watcher，在它的回调函数中会调用 updateComponent 方法，
+// 在此方法中调用 vm._render 方法先生成虚拟 Node，最终调用 vm._update 更新 DOM。
 export function mountComponent (
   vm: Component,
   el: ?Element,
@@ -175,11 +179,13 @@ export function mountComponent (
       }
     }
   }
+  // 生命周期函数
   callHook(vm, 'beforeMount')
 
-  let updateComponent
+  let updateComponent // 先_render生成虚拟DOM，再_update生成真实DOM
   /* istanbul ignore if */
   if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
+    // 如果调用了updateComponent函数，就会将最新的模板内容渲染到视图页面中，这样就完成了挂载操作的一半工作
     updateComponent = () => {
       const name = vm._name
       const id = vm._uid
@@ -192,12 +198,14 @@ export function mountComponent (
       measure(`vue ${name} render`, startTag, endTag)
 
       mark(startTag)
+      // 核心
       vm._update(vnode, hydrating)
       mark(endTag)
       measure(`vue ${name} patch`, startTag, endTag)
     }
   } else {
     updateComponent = () => {
+      //核心
       vm._update(vm._render(), hydrating)
     }
   }
@@ -205,9 +213,10 @@ export function mountComponent (
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
+  // 另外一半工作：还要开启对模板中数据（状态）的监控
   new Watcher(
     vm, // 第一个参数
-    updateComponent, // 第二个参数
+    updateComponent, // 第二个参数 渲染更新函数
     noop, // 第三个参数
     {// 第四个参数
     before () {
@@ -215,13 +224,15 @@ export function mountComponent (
         callHook(vm, 'beforeUpdate')
       }
     }
-  }, true /* isRenderWatcher */)
+  }, 
+  true /* isRenderWatcher */
+  )
   hydrating = false
 
   // manually mounted instance, call mounted on self
   // mounted is called for render-created child components in its inserted hook
   if (vm.$vnode == null) {
-    vm._isMounted = true
+    vm._isMounted = true// 设置 vm._isMounted 为 true， 表示这个实例已经挂载了，同时执行 mounted 钩子函数
     callHook(vm, 'mounted')
   }
   return vm

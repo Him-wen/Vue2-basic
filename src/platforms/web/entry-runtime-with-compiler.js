@@ -14,12 +14,14 @@ const idToTemplate = cached(id => {
   return el && el.innerHTML
 })
 
+// 缓存了原型上的 $mount 方法
 const mount = Vue.prototype.$mount
+// 重新定义该方法
 Vue.prototype.$mount = function (
   el?: string | Element,
-  hydrating?: boolean
+  hydrating?: boolean // 第二个参数是和服务端渲染相关
 ): Component {
-  el = el && query(el)
+  el = el && query(el)// 工具函数
 
   /* istanbul ignore if */
   if (el === document.body || el === document.documentElement) {
@@ -31,8 +33,10 @@ Vue.prototype.$mount = function (
 
   const options = this.$options
   // resolve template/el and convert to render function
+  // 如果没有render方法
   if (!options.render) {
     let template = options.template
+    // 如果有template
     if (template) {
       if (typeof template === 'string') {
         if (template.charAt(0) === '#') {
@@ -53,9 +57,11 @@ Vue.prototype.$mount = function (
         }
         return this
       }
+      // 如果没有template就用el
     } else if (el) {
       template = getOuterHTML(el)
     }
+    // 以上函数都会有template
     if (template) {
       /* istanbul ignore if */
       if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
@@ -78,7 +84,7 @@ Vue.prototype.$mount = function (
       }
     }
   }
-  return mount.call(this, el, hydrating)
+  return mount.call(this, el, hydrating) // 调用原先原型上的 $mount 方法挂载，this指的是vm
 }
 
 /**

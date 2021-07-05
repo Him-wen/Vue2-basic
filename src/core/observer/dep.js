@@ -27,6 +27,7 @@ export default class Dep {
     this.subs.push(sub)
   }
 
+  // 删除一个依赖
   removeSub (sub: Watcher) {
     remove(this.subs, sub)
   }
@@ -34,7 +35,7 @@ export default class Dep {
   // 向watcher中添加dep
   depend () {
     if (Dep.target) {
-      Dep.target.addDep(this)
+      Dep.target.addDep(this)// 在dep添加watcher
     }
 
   //* 通知 dep 中的所有 watcher，执行 watcher.update() 方法
@@ -65,12 +66,14 @@ export default class Dep {
 Dep.target = null
 const targetStack = []
 
+// 在需要进行依赖收集的时候调用，设置 Dep.target = watcher
 export function pushTarget (target: ?Watcher) {
   targetStack.push(target)// 压栈
   Dep.target = target
 }
 
+// 依赖收集结束调用，设置 Dep.target = null
 export function popTarget () {
   targetStack.pop()
-  Dep.target = targetStack[targetStack.length - 1]
+  Dep.target = targetStack[targetStack.length - 1]// 将当前的值清空掉
 }

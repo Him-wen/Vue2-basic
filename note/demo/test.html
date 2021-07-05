@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Lyn Vue1.0</title>
+</head>
+
+<body>
+  <div id="app">
+    <h3>数据响应式更新 原理</h3>
+    <div></div>
+    
+  </div>
+  <script type="module">
+    import Observer from './observer'
+    let car =new Observer({
+        name: 'james',
+        'age':12,
+    })
+    console.log(car.age);
+  </script>
+</body>
+
+</html>

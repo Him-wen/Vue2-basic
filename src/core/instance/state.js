@@ -34,7 +34,7 @@ const sharedPropertyDefinition = {
   get: noop,
   set: noop
 }
-
+// 第一个参数：Vue vm实例，第二个参数：‘_data’字符串，第三个参数：key
 export function proxy (target: Object, sourceKey: string, key: string) {
   sharedPropertyDefinition.get = function proxyGetter () {
     return this[sourceKey][key]
@@ -42,6 +42,7 @@ export function proxy (target: Object, sourceKey: string, key: string) {
   sharedPropertyDefinition.set = function proxySetter (val) {
     this[sourceKey][key] = val
   }
+  // 输入vm(this).name 可以等于this._data.name 也就是 data.name:对于 data 而言，对 vm._data.xxxx 的读写变成了对 vm.xxxx 的读写，而对于 vm._data.xxxx 我们可以访问到定义在 data 函数返回对象中的属性，所以我们就可以通过 vm.xxxx 访问到定义在 data 函数返回对象中的 xxxx 属性了
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
@@ -60,10 +61,11 @@ export function initState (vm: Component) {
     initWatch(vm, opts.watch)
   }
 }
-
+// 处理 props 对象，为 props 对象的每个属性设置响应式，并将其代理到 vm 实例上
 function initProps (vm: Component, propsOptions: Object) {
   const propsData = vm.$options.propsData || {}
   const props = vm._props = {}
+   // 缓存 props 的每个 key，性能优化
   // cache prop keys so that future props updates can iterate using Array
   // instead of dynamic object key enumeration.
   const keys = vm.$options._propKeys = []
@@ -72,8 +74,10 @@ function initProps (vm: Component, propsOptions: Object) {
   if (!isRoot) {
     toggleObserving(false)
   }
+  // 遍历 props 对象
   for (const key in propsOptions) {
     keys.push(key)
+    // 获取 props[key] 的默认值
     const value = validateProp(key, propsOptions, propsData, vm)
     /* istanbul ignore else */
     if (process.env.NODE_ENV !== 'production') {
@@ -85,6 +89,7 @@ function initProps (vm: Component, propsOptions: Object) {
           vm
         )
       }
+      // 为 props 的每个 key 是设置数据响应式
       defineReactive(props, key, value, () => {
         if (!isRoot && !isUpdatingChildComponent) {
           warn(
@@ -103,6 +108,7 @@ function initProps (vm: Component, propsOptions: Object) {
     // during Vue.extend(). We only need to proxy props defined at
     // instantiation here.
     if (!(key in vm)) {
+      // 代理 key 到 vm 对象上
       proxy(vm, `_props`, key)
     }
   }
@@ -156,10 +162,10 @@ function initData (vm: Component) {
         vm
       )
     } else if (!isReserved(key)) {
-      proxy(vm, `_data`, key) // 为 data 对象上的数据设置响应式
+      proxy(vm, `_data`, key) // 为 data 对象上的数据设置代理的对象
     }
   }
-  // observe data
+  // observe data 为 data 对象上的数据设置响应式
   observe(data, true /* asRootData */)
 }
 // call 让当前组件实例(vm) this 继承了 this._data 的值,用 call 改变指向将 $data（原型方法） 指向 当前this 的数据
@@ -177,7 +183,19 @@ export function getData (data: Function, vm: Component): any {
 }
 
 const computedWatcherOptions = { lazy: true }
-
+/**
+ * 三件事：
+ *   1、为 computed[key] 创建 watcher 实例，默认是懒执行
+ *   2、代理 computed[key] 到 vm 实例
+ *   3、判重，computed 中的 key 不能和 data、props 中的属性重复
+ * @param {*} computed = {
+ *   key1: function() { return xx },
+ *   key2: {
+ *     get: function() { return xx },
+ *     set: function(val) {}
+ *   }
+ * }
+ */
 function initComputed (vm: Component, computed: Object) {
   // $flow-disable-line
   const watchers = vm._computedWatchers = Object.create(null)
@@ -207,7 +225,7 @@ function initComputed (vm: Component, computed: Object) {
     // component-defined computed properties are already defined on the
     // component prototype. We only need to define computed properties defined
     // at instantiation here.
-    if (!(key in vm)) {
+    if (!(key in vm)) {// 判断如果 key 不是 vm 的属性,因为不能重复
       defineComputed(vm, key, userDef)
     } else if (process.env.NODE_ENV !== 'production') {
       if (key in vm.$data) {
@@ -236,7 +254,7 @@ export function defineComputed (
         ? createComputedGetter(key)
         : createGetterInvoker(userDef.get)
       : noop
-    sharedPropertyDefinition.set = userDef.set || noop
+    sharedPropertyDefinition.set = userDef.set || noop // setter 通常是计算属性是一个对象，并且拥有 set 方法的时候才有，否则是一个空函数
   }
   if (process.env.NODE_ENV !== 'production' &&
       sharedPropertyDefinition.set === noop) {
@@ -247,15 +265,28 @@ export function defineComputed (
       )
     }
   }
+  // 拦截对 target.key 的访问和设置
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
 function createComputedGetter (key) {
-  return function computedGetter () {
+  return function computedGetter () {// 计算属性对应的 getter
     const watcher = this._computedWatchers && this._computedWatchers[key]
     if (watcher) {
+       // 计算 key 对应的值，通过执行 computed.key 的回调函数来得到
+      // watcher.dirty 属性就是大家常说的 computed 计算结果会缓存的原理
+      // <template>
+      //   <div>{{ computedProperty }}</div>
+      //   <div>{{ computedProperty }}</div>
+      // </template>
+      // 像这种情况下，在页面的一次渲染中，两个 dom 中的 computedProperty 只有第一个
+      // 会执行 computed.computedProperty 的回调函数计算实际的值，
+      // 即执行 watcher.evalaute，而第二个就不走计算过程了，
+      // 因为上一次执行 watcher.evalute 时把 watcher.dirty 置为了 false，
+      // 待页面更新后，wathcer.update 方法会将 watcher.dirty 重新置为 true，
+      // 供下次页面更新时重新计算 computed.key 的结果
       if (watcher.dirty) {
-        watcher.evaluate()
+        watcher.evaluate()// 获取get
       }
       if (Dep.target) {
         watcher.depend()

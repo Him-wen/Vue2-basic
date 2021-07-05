@@ -38,6 +38,7 @@ export function toggleObserving (value: boolean) {
  * 而对象的各个属性则会被转换成 getter/setter，并收集依赖和通知更新
  */
  */
+// value 以 data 中的数据为例
 export class Observer {
   value: any;
   dep: Dep;
@@ -47,20 +48,22 @@ export class Observer {
     this.value = value
     this.dep = new Dep()
     this.vmCount = 0
-    // 添加一个__ob__属性，并赋值为实例
+    // 添加一个__ob__属性，并赋值为该 value 的实例，相当于为value打上标记，表示它已经被转化成响应式了，避免重复操作
     // 开发中输出 data 上对象类型的数据，会发现该对象多了一个 __ob__ 的属性
     def(value, '__ob__', this)
-    // 如果是数组处理
+
+    //分对象和数组来进行操作：
+    //1.如果是数组处理
     if (Array.isArray(value)) {
       if (hasProto) {// 判断有没有原型
         // value的原型是arrayMethods
-        protoAugment(value, arrayMethods)
+        protoAugment(value, arrayMethods)// 从修改的数组原型上面继承的方法
       } else {
         copyAugment(value, arrayMethods, arrayKeys)
       }
-      this.observeArray(value)// 对数组进行处理
+      this.observeArray(value)// 对数组里面的每一个对象都进行响应式处理
     } else {
-      // 如果不是数组的处理(对象)
+      // 2.如果不是数组的处理(对象)
       this.walk(value)
     }
   }
@@ -73,20 +76,20 @@ export class Observer {
    * value type is Object.
    */
   // {
-  //   a:'a',
-  //   b:'b',
+  //   key1:'a',
+  //   key2:'b',
   // }
   walk (obj: Object) {
-    const keys = Object.keys(obj)
-    for (let i = 0; i < keys.length; i++) {
-      defineReactive(obj, keys[i])// 第二个参数为键值 的取值
+    const keys = Object.keys(obj) // 获取每个 data 的键(key1)
+    for (let i = 0; i < keys.length; i++) {// 递归的进行处理
+      defineReactive(obj, keys[i])// 第二个参数为 键值(a) 的取值
     }
   }
 
   /**
    * Observe a list of Array items.
    */
-  observeArray (items: Array<any>) {
+  observeArray (items: Array<any>) {// 对数组进行响应式处理
     for (let i = 0, l = items.length; i < l; i++) {
       observe(items[i])
     }
@@ -121,7 +124,7 @@ function copyAugment (target: Object, src: Object, keys: Array<string>) {
  * Attempt to create an observer instance for a value,
  * returns the new observer if successfully observed,
  * or the existing observer if the value already has one.
- * 响应式处理的真正入口
+ * 响应式处理的真正入口 （创建Observe实例）
  * 为对象创建观察者实例，如果对象已经被观察过，则返回已有的观察者实例，否则创建新的观察者实例
  * @param {*} value 对象 => {}
  */
@@ -152,18 +155,18 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
 
 /**
  * Define a reactive property on an Object.
- * 拦截 obj[key] 的读取和设置操作：
- *   1、在第一次读取时收集依赖，比如执行 render 函数生成虚拟 DOM 时会有读取操作
+ * 拦截 obj[key] 的读取 get 和设置 set 操作：
+ *   1、在第一次读取时收集依赖，比如执行 render 函数生成虚拟 DOM 时 (updateCompu函数) 会有读取操作
  *   2、在更新时设置新值并通知依赖更新
  */
 export function defineReactive (
-  obj: Object,
-  key: string,
+  obj: Object,(data)
+  key: string,(a)
   val: any,
   customSetter?: ?Function,
   shallow?: boolean
 ) {
-  // 实例化 dep，一个 key（键值） 一个 dep
+  // 实例化 dep，一个 key（键值 a ） 一个 dep (依赖管理器，也可以当作依赖数组来理解)
   const dep = new Dep()
 
   // 获取 obj[key] 的属性描述符，发现它是不可配置对象的话直接 return
@@ -173,18 +176,20 @@ export function defineReactive (
   }
 
   // cater for pre-defined getter/setters
-  const getter = property && property.get
+  const getter = property && property.get // property不为空的情况下 获取get函数
   const setter = property && property.set
   if ((!getter || setter) && arguments.length === 2) {
     val = obj[key]
   }
-// 递归调用，处理 val 即 obj[key] 的值为对象的情况，保证对象中的所有 key 都被观察
+
+  // 递归调用，处理 val 即 obj[key] 的值为对象的情况，保证对象中的所有 key 都被观察，typeof val === 'object'
   let childOb = !shallow && observe(val)
-// 响应式核心
-  Object.defineProperty(obj, key, {
+
+  // 响应式核心
+  Object.defineProperty(obj, key, { // data
     enumerable: true,
     configurable: true,
-    // get 拦截对 obj[key] 的读取操作
+    // get 拦截对 obj[key] 的读取操作 getter函数
     get: function reactiveGetter () {
       const value = getter ? getter.call(obj) : val
       /**
@@ -193,7 +198,7 @@ export function defineReactive (
        * 而回调函数中如果有 vm.key 的读取行为，则会触发这里的 读取 拦截，进行依赖收集
        * 回调函数执行完以后又会将 Dep.target 设置为 null，避免这里重复收集依赖
        */
-       if (Dep.target) {
+       if (Dep.target) {// 当在 watcher里面触发了 get方法时，这个就有值了
         // 依赖收集，在 dep 中添加 watcher，也在 watcher 中添加 dep
         dep.depend()
         // childOb 表示对象中嵌套对象的观察者对象，如果存在也对其进行依赖收集

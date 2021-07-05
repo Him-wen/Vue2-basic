@@ -82,9 +82,10 @@ export default class Watcher {
     this.expression = process.env.NODE_ENV !== 'production'
       ? expOrFn.toString()
       : ''
-    // parse expression for getter
+    // 核心的一个逻辑parse expression for getter
     if (typeof expOrFn === 'function') {
-      this.getter = expOrFn// getter 方法就是传入的第二个参数
+      this.getter = expOrFn// getter 方法就是传入的第二个参数 updateComponent，其实也就是执行render(也就是读取数据，触发数据对象上面的 getter ) 和 update 方法
+      // 所以首次渲染的过程 在 vm._render() 过程中，会触发所有数据的 getter，这样实际上已经完成了一个依赖收集的过程。
     } else {
       this.getter = parsePath(expOrFn)
       if (!this.getter) {
@@ -97,6 +98,7 @@ export default class Watcher {
         )
       }
     }
+    // 不是懒执行 就直接执行get方法
     this.value = this.lazy
       ? undefined
       : this.get()
@@ -106,20 +108,21 @@ export default class Watcher {
    * Evaluate the getter, and re-collect dependencies.
    * 以下定义了一些原型方法，和依赖收集相关的有 get、addDep 和 cleanupDeps 方法
    */
-  get () {// 执行
-    /**
-   * 执行 this.getter，并重新收集依赖
-   * this.getter 是实例化 watcher 时传递的第二个参数，一个函数或者字符串，比如：updateComponent 或者 parsePath 返回的函数
-   * 为什么要重新收集依赖？
-   *   因为触发更新说明有响应式数据被更新了，但是被更新的数据虽然已经经过 observe 观察了，但是却没有进行依赖收集，
-   *   所以，在更新页面时，会重新执行一次 render 函数，执行期间会触发读取操作，这时候进行依赖收集
-   */
-  // 打开 Dep.target，Dep.target = this
+  get () {
+      /**
+     * 执行 this.getter，并重新收集依赖（因为这里触发更新了）
+     * this.getter 是实例化 watcher 时传递的第二个参数，一个函数或者字符串，比如：updateComponent 或者 parsePath 返回的函数
+     * 为什么要重新收集依赖？
+     *   因为触发更新说明有响应式数据被更新了，但是被更新的数据虽然已经经过 observe 观察了，但是却没有进行依赖收集，
+     *   所以，在更新页面时，会重新执行一次 render 函数，执行期间会触发读取操作，这时候进行依赖收集
+     */
+    // 打开 Dep.target，Dep.target = this
     pushTarget(this)
     let value
     const vm = this.vm
     try {
-      value = this.getter.call(vm, vm)
+      //getter数据对应的之前的updateComponent函数
+      value = this.getter.call(vm, vm)// 获取一下被依赖的数据,获取被依赖数据的目的是触发该数据上面的getter
     } catch (e) {
       if (this.user) {
         handleError(e, vm, `getter for watcher "${this.expression}"`)
@@ -134,22 +137,29 @@ export default class Watcher {
         traverse(value)
       }
       // 关闭 Dep.target，Dep.target = null
-      popTarget()
+      popTarget()// 在get()方法最后将window.target释放掉
       this.cleanupDeps()
     }
     return value
   }
 
   /**
+   *  /**
    * Add a dependency to this directive.
+   * 两件事：
+   *   1、添加 dep 给自己（watcher）
+   *   2、添加自己（watcher）到 dep
    * this.deps 和 this.newDeps 表示 Watcher 实例持有的 Dep 实例的数组
    */
   addDep (dep: Dep) {
+    // 判重，如果 dep 已经存在则不重复添加
     const id = dep.id
     if (!this.newDepIds.has(id)) {
+      // 缓存 dep.id，用于判重
       this.newDepIds.add(id)
+      // 添加 dep，将dep放到watcher中 
       this.newDeps.push(dep)
-      // 将dep放到watcher中 
+      // 避免在 dep 中重复添加 watcher，this.depIds 的设置在 cleanupDeps 方法中
       if (!this.depIds.has(id)) {
         // 将watcher自己放dep中，双向收集
         dep.addSub(this)
@@ -159,6 +169,9 @@ export default class Watcher {
 
   /**
    * Clean up for dependency collection.
+   * 场景：v-if渲染的时候： Vue 设计了在每次添加完新的订阅，会移除掉旧的订阅
+   * 依赖清空 在添加 deps 的订阅过程，已经能通过 id 去重避免重复订阅了
+   * 所以 Watcher 在构造函数中会初始化 2 个 Dep 实例数组，newDeps 表示新添加的 Dep 实例数组，而 deps 表示上一次添加的 Dep 实例数组。
    */
   cleanupDeps () {
     let i = this.deps.length
@@ -194,7 +207,7 @@ export default class Watcher {
     // 方法进行更新
     // 这个属性在官方文档中没有出现
       this.run()
-    } else {
+    } else {// 对于一般场景来说
       // 将当前watcher加入 watcher队列
       // 执行一个过滤的操作，同一个的 Watcher 在同一个 tick 的时候应该只被执行一次，将watcher对象自身传递给queuewatcher方法
       queueWatcher(this)// this 代表watcher实例自身
@@ -244,8 +257,8 @@ export default class Watcher {
    * This only gets called for lazy watchers.
    */
   evaluate () {
-    this.value = this.get()
-    this.dirty = false
+    this.value = this.get()// 会执行 value = this.getter.call(vm, vm)，这实际上就是执行了计算属性定义的 getter 函数
+    this.dirty = false // 初始化时候为true，这里变成了false
   }
 
   /**

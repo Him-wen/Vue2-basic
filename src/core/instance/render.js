@@ -30,6 +30,7 @@ export function initRender (vm: Component) {
   vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)
   // normalization is always applied for the public version, used in
   // user-written render functions.
+  // 创建createElement的真正的地方
   vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
 
   // $attrs & $listeners are exposed for easier HOC creation.
@@ -78,7 +79,7 @@ export function renderMixin (Vue: Class<Component>) {
     let vnode
     try {// 执行render函数 得到组件的vnode
 
-      vnode = render.call(vm._renderProxy, vm.$createElement)
+      vnode = render.call(vm._renderProxy, vm.$createElement)// 来自用户手写的，手写或者有el，template编译而来的都行
 
     } catch (e) {// 异常处理
       handleError(e, vm, `render`)
